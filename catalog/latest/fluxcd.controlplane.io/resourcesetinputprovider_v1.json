@@ -59,6 +59,7 @@
             },
             "limit": {
               "default": 100,
+              "maximum": 10000,
               "type": "integer"
             },
             "semver": {
@@ -106,6 +107,61 @@
           ],
           "type": "object"
         },
+        "selectors": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "matchExpressions": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "key": {
+                      "type": "string"
+                    },
+                    "operator": {
+                      "type": "string"
+                    },
+                    "values": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array",
+                      "x-kubernetes-list-type": "atomic"
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "operator"
+                  ],
+                  "type": "object"
+                },
+                "type": "array",
+                "x-kubernetes-list-type": "atomic"
+              },
+              "matchLabels": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              "name": {
+                "type": "string"
+              },
+              "namespace": {
+                "type": "string"
+              }
+            },
+            "type": "object",
+            "x-kubernetes-map-type": "atomic",
+            "x-kubernetes-validations": [
+              {
+                "message": "name is mutually exclusive with matchLabels and matchExpressions",
+                "rule": "!has(self.name) || (!has(self.matchLabels) && !has(self.matchExpressions))"
+              }
+            ]
+          },
+          "type": "array"
+        },
         "serviceAccountName": {
           "type": "string"
         },
@@ -144,7 +200,8 @@
             "ACRArtifactTag",
             "ECRArtifactTag",
             "GARArtifactTag",
-            "ExternalService"
+            "ExternalService",
+            "ExternalArtifact"
           ],
           "type": "string"
         },
@@ -163,8 +220,12 @@
           "rule": "self.type != 'Static' || !has(self.url)"
         },
         {
-          "message": "spec.url must not be empty when spec.type is not 'Static'",
-          "rule": "self.type == 'Static' || has(self.url)"
+          "message": "spec.url must be empty when spec.type is 'ExternalArtifact'",
+          "rule": "self.type != 'ExternalArtifact' || !has(self.url)"
+        },
+        {
+          "message": "spec.url must not be empty when spec.type is not 'Static' or 'ExternalArtifact'",
+          "rule": "self.type == 'Static' || self.type == 'ExternalArtifact' || has(self.url)"
         },
         {
           "message": "spec.url must start with 'http://' or 'https://' when spec.type is a Git provider",
@@ -183,6 +244,10 @@
           "rule": "!self.type.endsWith('ArtifactTag') || self.url.startsWith('oci')"
         },
         {
+          "message": "spec.url must include the repository path after the registry host when spec.type is an OCI provider",
+          "rule": "!self.type.endsWith('ArtifactTag') || !self.url.startsWith('oci://') || self.url.substring(6).contains('/')"
+        },
+        {
           "message": "spec.url must start with 'http://' or 'https://' when spec.type is 'ExternalService'",
           "rule": "self.type != 'ExternalService' || self.url.startsWith('http')"
         },
@@ -195,16 +260,24 @@
           "rule": "self.type != 'ExternalService' || !self.url.startsWith('http://') || (has(self.insecure) && self.insecure)"
         },
         {
-          "message": "cannot specify spec.serviceAccountName when spec.type is not one of AzureDevOps*, AWSCodeCommit* or *ArtifactTag",
-          "rule": "!has(self.serviceAccountName) || self.type.startsWith('AzureDevOps') || self.type.startsWith('AWSCodeCommit') || self.type.endsWith('ArtifactTag')"
+          "message": "cannot specify spec.serviceAccountName when spec.type is not one of AzureDevOps*, AWSCodeCommit*, *ArtifactTag or ExternalArtifact",
+          "rule": "!has(self.serviceAccountName) || self.type.startsWith('AzureDevOps') || self.type.startsWith('AWSCodeCommit') || self.type.endsWith('ArtifactTag') || self.type == 'ExternalArtifact'"
         },
         {
-          "message": "cannot specify spec.certSecretRef when spec.type is one of Static, AzureDevOps*, AWSCodeCommit*, ACRArtifactTag, ECRArtifactTag or GARArtifactTag",
-          "rule": "!has(self.certSecretRef) || !(self.type == 'Static' || self.type.startsWith('AzureDevOps') || self.type.startsWith('AWSCodeCommit') || (self.type.endsWith('ArtifactTag') && self.type != 'OCIArtifactTag'))"
+          "message": "cannot specify spec.certSecretRef when spec.type is one of Static, ExternalArtifact, AzureDevOps*, AWSCodeCommit*, ACRArtifactTag, ECRArtifactTag or GARArtifactTag",
+          "rule": "!has(self.certSecretRef) || !(self.type == 'Static' || self.type == 'ExternalArtifact' || self.type.startsWith('AzureDevOps') || self.type.startsWith('AWSCodeCommit') || (self.type.endsWith('ArtifactTag') && self.type != 'OCIArtifactTag'))"
         },
         {
-          "message": "cannot specify spec.secretRef when spec.type is one of Static, AWSCodeCommit*, ACRArtifactTag, ECRArtifactTag or GARArtifactTag",
-          "rule": "!has(self.secretRef) || !(self.type == 'Static' || self.type.startsWith('AWSCodeCommit') || (self.type.endsWith('ArtifactTag') && self.type != 'OCIArtifactTag'))"
+          "message": "cannot specify spec.secretRef when spec.type is one of Static, ExternalArtifact, AWSCodeCommit*, ACRArtifactTag, ECRArtifactTag or GARArtifactTag",
+          "rule": "!has(self.secretRef) || !(self.type == 'Static' || self.type == 'ExternalArtifact' || self.type.startsWith('AWSCodeCommit') || (self.type.endsWith('ArtifactTag') && self.type != 'OCIArtifactTag'))"
+        },
+        {
+          "message": "spec.selectors must be set when spec.type is 'ExternalArtifact'",
+          "rule": "self.type != 'ExternalArtifact' || (has(self.selectors) && size(self.selectors) > 0)"
+        },
+        {
+          "message": "spec.selectors must not be set when spec.type is not 'ExternalArtifact'",
+          "rule": "self.type == 'ExternalArtifact' || !has(self.selectors)"
         }
       ]
     },
