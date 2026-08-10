@@ -22,6 +22,7 @@
                   "properties": {
                     "exclude": {
                       "items": {
+                        "maxLength": 1024,
                         "type": "string"
                       },
                       "maxItems": 100,
@@ -44,7 +45,7 @@
                     "to": {
                       "maxLength": 1024,
                       "minLength": 1,
-                      "pattern": "^@(artifact)/(.*)$",
+                      "pattern": "^@artifact/([^/]{0,1}|[^./][^/]|[.][^./]|[^/]{3,})(/([^/]{0,1}|[^./][^/]|[.][^./]|[^/]{3,}))*$",
                       "type": "string"
                     }
                   },
