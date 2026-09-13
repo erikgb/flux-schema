@@ -269,7 +269,7 @@ spec:
 	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
 	g.Expect(results).To(HaveLen(1))
 	g.Expect(results[0].Status).To(Equal(StatusValid))
-	g.Expect(results[0].Identifier()).To(Equal("Widget/default/w1"))
+	g.Expect(results[0].Identifier()).To(Equal("example.com/v1/Widget/default/w1"))
 	g.Expect(results[0].Errors).To(BeEmpty())
 }
 
@@ -1199,7 +1199,7 @@ spec:
 	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
 	g.Expect(results[0].Status).To(Equal(StatusValid))
 	g.Expect(results[0].Namespace).To(BeEmpty())
-	g.Expect(results[0].Identifier()).To(Equal("Widget/cluster-widget"))
+	g.Expect(results[0].Identifier()).To(Equal("example.com/v1/Widget/cluster-widget"))
 }
 
 func TestValidateBytes_GenerateNameIdentity(t *testing.T) {
@@ -1218,7 +1218,7 @@ spec:
 `)
 	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
 	g.Expect(results[0].Status).To(Equal(StatusValid))
-	g.Expect(results[0].Identifier()).To(Equal("Widget/flux-system/foo-{{ generateName }}"))
+	g.Expect(results[0].Identifier()).To(Equal("example.com/v1/Widget/flux-system/foo-{{ generateName }}"))
 }
 
 func TestValidateBytes_NoNameOrGenerateName(t *testing.T) {
@@ -1260,7 +1260,7 @@ validate:
 	g.Expect(results[0].Status).To(Equal(StatusValid))
 	g.Expect(results[0].Reason).To(Equal(ReasonNone))
 	g.Expect(results[0].Errors).To(BeEmpty())
-	g.Expect(results[0].Identifier()).To(Equal("Config/#1"))
+	g.Expect(results[0].Identifier()).To(Equal("schema.plugin.fluxcd.io/v1beta1/Config/#1"))
 }
 
 func TestValidateBytes_DuplicateKey(t *testing.T) {
@@ -1301,7 +1301,7 @@ spec:
 func TestValidateBytes_DuplicateKey_IdentityRecoveredWithNamespace(t *testing.T) {
 	// Covers the realistic shape (namespace + duplicate label keys) from
 	// testdata/validate/manifests/invalid-metadata.yaml: strict decode must
-	// fail, but the CLI line still needs Kind/Namespace/Name.
+	// fail, but the CLI line still needs APIVersion/Kind/Namespace/Name.
 	g := NewWithT(t)
 	dir := t.TempDir()
 	writeWidgetSchema(t, dir)
@@ -1320,7 +1320,7 @@ spec:
 `)
 	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
 	g.Expect(results[0].Status).To(Equal(StatusInvalid))
-	g.Expect(results[0].Identifier()).To(Equal("Widget/flux-system/dup"))
+	g.Expect(results[0].Identifier()).To(Equal("example.com/v1/Widget/flux-system/dup"))
 }
 
 func TestValidateBytes_DuplicateKey_FallsBackToDocIndexWhenNameUnset(t *testing.T) {
@@ -1344,7 +1344,7 @@ spec:
 `)
 	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
 	g.Expect(results[0].Status).To(Equal(StatusInvalid))
-	g.Expect(results[0].Identifier()).To(Equal("Widget/default/#1"))
+	g.Expect(results[0].Identifier()).To(Equal("example.com/v1/Widget/default/#1"))
 }
 
 func TestValidateBytes_MissingApiVersionAndKind(t *testing.T) {
@@ -1943,7 +1943,7 @@ stringData:
 	g.Expect(results).To(HaveLen(1))
 	g.Expect(results[0].Status).To(Equal(StatusSkipped))
 	g.Expect(results[0].Reason).To(Equal(ReasonKindSkipped))
-	g.Expect(results[0].Identifier()).To(Equal("Secret/s1"))
+	g.Expect(results[0].Identifier()).To(Equal("v1/Secret/s1"))
 }
 
 func TestValidateBytes_SkipKind_GVKMatchesOnlyExactVersion(t *testing.T) {

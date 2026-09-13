@@ -137,17 +137,17 @@ invalid ones, pass `--verbose`:
 ```console
 $ flux schema validate ./manifests --verbose
 
-manifests/releases.yaml - HelmRelease/apps/frontend is invalid: cel violation
+manifests/releases.yaml - helm.toolkit.fluxcd.io/v2/HelmRelease/apps/frontend is invalid: cel violation
   - /spec: Invalid value: either 'chart' or 'chartRef' must be set
-manifests/sources.yaml - Bucket/apps/frontend-config is invalid: schema violation
+manifests/sources.yaml - source.toolkit.fluxcd.io/v1/Bucket/apps/frontend-config is invalid: schema violation
   - /spec: missing property 'bucketName'
   - /spec/interval: got number, want string
   - /spec/secretRef/name: got object, want string
   - /spec: additional properties 'force' not allowed
-manifests/sources.yaml - OCIRepository/apps/frontend is invalid: yaml parse error
+manifests/sources.yaml - source.toolkit.fluxcd.io/v1/OCIRepository/apps/frontend is invalid: yaml parse error
   - line 10: key "app.kubernetes.io/name" already set in map
-manifests/sources.yaml - HelmChart/apps/frontend is valid
-manifests/sources.yaml - Secret/apps/auth-sops is skipped: kind skipped
+manifests/sources.yaml - source.toolkit.fluxcd.io/v1/HelmChart/apps/frontend is valid
+manifests/sources.yaml - v1/Secret/apps/auth-sops is skipped: kind skipped
 Summary: 5 resources found in 2 files - Valid: 1, Invalid: 3, Skipped: 1
 ```
 

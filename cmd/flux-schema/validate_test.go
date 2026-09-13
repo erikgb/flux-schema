@@ -181,9 +181,9 @@ spec:
 	})
 	g.Expect(err).To(HaveOccurred())
 	g.Expect(out).ToNot(ContainSubstring("additional properties 'namespace' not allowed"))
-	g.Expect(out).To(ContainSubstring(longNamePath + " - Widget/default/" + longName + " is invalid: schema violation"))
+	g.Expect(out).To(ContainSubstring(longNamePath + " - example.com/v1/Widget/default/" + longName + " is invalid: schema violation"))
 	g.Expect(out).To(MatchRegexp(`(?m)^  - /metadata/name: `))
-	g.Expect(out).To(ContainSubstring(typoPath + " - Widget/default/typo-widget is invalid: schema violation"))
+	g.Expect(out).To(ContainSubstring(typoPath + " - example.com/v1/Widget/default/typo-widget is invalid: schema violation"))
 	g.Expect(out).To(ContainSubstring("additional properties 'namepaceX' not allowed"))
 	g.Expect(out).To(ContainSubstring("Summary: 3 resources found in 3 files - Valid: 1, Invalid: 2, Skipped: 0"))
 }
@@ -199,7 +199,7 @@ func TestValidateCmd_InvalidManifest_PrintsViolationAndFails(t *testing.T) {
 		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
 	})
 	g.Expect(err).To(HaveOccurred())
-	g.Expect(out).To(ContainSubstring(path + " - Widget/default/bad-widget is invalid: schema violation"))
+	g.Expect(out).To(ContainSubstring(path + " - example.com/v1/Widget/default/bad-widget is invalid: schema violation"))
 	g.Expect(out).To(MatchRegexp(`(?m)^  - /spec/name: `))
 	g.Expect(out).To(ContainSubstring("Summary: 1 resource found in 1 file - Valid: 0, Invalid: 1, Skipped: 0"))
 }
@@ -244,7 +244,7 @@ func TestValidateCmd_Verbose_PrintsValidLines(t *testing.T) {
 		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
 	})
 	g.Expect(err).ToNot(HaveOccurred())
-	g.Expect(out).To(ContainSubstring(path + " - Widget/default/ok-widget is valid"))
+	g.Expect(out).To(ContainSubstring(path + " - example.com/v1/Widget/default/ok-widget is valid"))
 }
 
 func TestValidateCmd_SchemaLocationFlagShorthand(t *testing.T) {
@@ -258,7 +258,7 @@ func TestValidateCmd_SchemaLocationFlagShorthand(t *testing.T) {
 		"-s", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
 	})
 	g.Expect(err).ToNot(HaveOccurred())
-	g.Expect(out).To(ContainSubstring(path + " - Widget/default/ok-widget is valid"))
+	g.Expect(out).To(ContainSubstring(path + " - example.com/v1/Widget/default/ok-widget is valid"))
 }
 
 func TestValidateCmd_MissingNameOrGenerateName(t *testing.T) {
@@ -280,7 +280,7 @@ spec:
 	// Admission-rule check runs before schema resolution, so the result is
 	// invalid even under --skip-missing-schemas.
 	g.Expect(err).To(HaveOccurred())
-	g.Expect(out).To(ContainSubstring("Widget/default/#1 is invalid: schema violation"))
+	g.Expect(out).To(ContainSubstring("example.com/v1/Widget/default/#1 is invalid: schema violation"))
 	g.Expect(out).To(MatchRegexp(`(?m)^  - /metadata: missing property 'name' or 'generateName'$`))
 }
 
@@ -319,10 +319,10 @@ func TestValidateCmd_FluxManifestsFixtures(t *testing.T) {
 	})
 	g.Expect(err).ToNot(HaveOccurred())
 
-	g.Expect(out).To(ContainSubstring(reconcilersPath + " - HelmRelease/apps/webapp is valid"))
-	g.Expect(out).To(ContainSubstring(sourcesPath + " - Bucket/default/minio-bucket is valid"))
+	g.Expect(out).To(ContainSubstring(reconcilersPath + " - helm.toolkit.fluxcd.io/v2/HelmRelease/apps/webapp is valid"))
+	g.Expect(out).To(ContainSubstring(sourcesPath + " - source.toolkit.fluxcd.io/v1/Bucket/default/minio-bucket is valid"))
 
-	g.Expect(out).To(ContainSubstring(sourcesPath + " - SealedSecret/default/minio-bucket-secret is skipped: schema not found"))
+	g.Expect(out).To(ContainSubstring(sourcesPath + " - bitnami.com/v1alpha1/SealedSecret/default/minio-bucket-secret is skipped: schema not found"))
 	g.Expect(out).To(MatchRegexp(`(?m)^  - no schema for kind "SealedSecret" in version "bitnami.com/v1alpha1"$`))
 
 	// 11 docs in valid-reconcilers.yaml + 8 in valid-sources.yaml = 19; the
@@ -343,13 +343,13 @@ func TestValidateCmd_InvalidFluxManifestsFixtures(t *testing.T) {
 	})
 	g.Expect(err).To(HaveOccurred())
 
-	g.Expect(out).To(ContainSubstring(invalidPath + " - Bucket/default/minio-bucket is invalid: schema violation"))
-	g.Expect(out).To(ContainSubstring(invalidPath + " - HelmRepository/default/example is invalid: schema violation"))
-	g.Expect(out).To(ContainSubstring(invalidPath + " - GitRepository/default/podinfo is invalid: schema violation"))
-	g.Expect(out).To(ContainSubstring(invalidPath + " - OCIRepository/default/podinfo is invalid: schema violation"))
-	g.Expect(out).To(ContainSubstring(invalidPath + " - ArtifactGenerator/apps/podinfo-composite is invalid: schema not found"))
+	g.Expect(out).To(ContainSubstring(invalidPath + " - source.toolkit.fluxcd.io/v1/Bucket/default/minio-bucket is invalid: schema violation"))
+	g.Expect(out).To(ContainSubstring(invalidPath + " - source.toolkit.fluxcd.io/v1/HelmRepository/default/example is invalid: schema violation"))
+	g.Expect(out).To(ContainSubstring(invalidPath + " - source.toolkit.fluxcd.io/v1/GitRepository/default/podinfo is invalid: schema violation"))
+	g.Expect(out).To(ContainSubstring(invalidPath + " - source.toolkit.fluxcd.io/v1/OCIRepository/default/podinfo is invalid: schema violation"))
+	g.Expect(out).To(ContainSubstring(invalidPath + " - source.extensions.fluxcd.io/v1alpha1/ArtifactGenerator/apps/podinfo-composite is invalid: schema not found"))
 	g.Expect(out).To(MatchRegexp(`(?m)^  - no schema for kind "ArtifactGenerator" in version "source\.extensions\.fluxcd\.io/v1alpha1"$`))
-	g.Expect(out).To(ContainSubstring(invalidPath + " - HelmChart/default/podinfo is valid"))
+	g.Expect(out).To(ContainSubstring(invalidPath + " - source.toolkit.fluxcd.io/v1/HelmChart/default/podinfo is valid"))
 
 	g.Expect(out).To(ContainSubstring("  - /spec: missing property 'bucketName'"))
 	g.Expect(out).To(ContainSubstring("  - /spec/interval: got number, want string"))
@@ -378,18 +378,18 @@ func TestValidateCmd_InvalidMetadataFixtures(t *testing.T) {
 	})
 	g.Expect(err).To(HaveOccurred())
 
-	g.Expect(out).To(ContainSubstring(invalidPath + " - OCIRepository/apps.default/invalid-labels-and-annotations is invalid: schema violation"))
+	g.Expect(out).To(ContainSubstring(invalidPath + " - source.toolkit.fluxcd.io/v1/OCIRepository/apps.default/invalid-labels-and-annotations is invalid: schema violation"))
 	g.Expect(out).To(ContainSubstring("  - /metadata/namespace: must not contain dots"))
 	g.Expect(out).To(ContainSubstring("  - /metadata/labels/app.kubernetes.io~1name: must match regex '(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?'"))
 	g.Expect(out).To(ContainSubstring("  - /metadata/labels/app.kubernetes.io~1instance: must be a string, got null"))
 	g.Expect(out).To(ContainSubstring(`  - /metadata/annotations/_app.kubernetes.io~1name: key: must match regex '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*'`))
 
-	g.Expect(out).To(ContainSubstring(invalidPath + " - OCIRepository/default/duplicate-labels is invalid: yaml parse error"))
-	g.Expect(out).To(ContainSubstring(invalidPath + " - OCIRepository/default/duplicate-fields is invalid: yaml parse error"))
+	g.Expect(out).To(ContainSubstring(invalidPath + " - source.toolkit.fluxcd.io/v1/OCIRepository/default/duplicate-labels is invalid: yaml parse error"))
+	g.Expect(out).To(ContainSubstring(invalidPath + " - source.toolkit.fluxcd.io/v1/OCIRepository/default/duplicate-fields is invalid: yaml parse error"))
 	g.Expect(out).To(MatchRegexp(`(?m)^  - line 8: key "app" already set in map$`))
 	g.Expect(out).To(MatchRegexp(`(?m)^  - line 11: key "tag" already set in map$`))
 
-	g.Expect(out).To(ContainSubstring(invalidPath + " - OCIRepository/default/#4 is invalid: schema violation"))
+	g.Expect(out).To(ContainSubstring(invalidPath + " - source.toolkit.fluxcd.io/v1/OCIRepository/default/#4 is invalid: schema violation"))
 	g.Expect(out).To(MatchRegexp(`(?m)^  - /metadata: missing property 'name' or 'generateName'$`))
 
 	g.Expect(out).To(ContainSubstring("Summary: 4 resources found in 1 file - Valid: 0, Invalid: 4, Skipped: 0"))
@@ -410,8 +410,8 @@ func TestValidateCmd_SchemaLocationShorthand(t *testing.T) {
 		"--verbose",
 	})
 	g.Expect(err).ToNot(HaveOccurred())
-	g.Expect(out).To(ContainSubstring("Bucket/default/minio-bucket is valid"))
-	g.Expect(out).To(ContainSubstring("SealedSecret/default/minio-bucket-secret is skipped"))
+	g.Expect(out).To(ContainSubstring("source.toolkit.fluxcd.io/v1/Bucket/default/minio-bucket is valid"))
+	g.Expect(out).To(ContainSubstring("bitnami.com/v1alpha1/SealedSecret/default/minio-bucket-secret is skipped"))
 }
 
 // TestValidateCmd_SkipKind exercises all three accepted pattern shapes against
@@ -436,10 +436,10 @@ func TestValidateCmd_SkipKind(t *testing.T) {
 	})
 	g.Expect(err).ToNot(HaveOccurred())
 
-	g.Expect(out).To(ContainSubstring(sourcesPath + " - SealedSecret/default/minio-bucket-secret is skipped: kind skipped"))
-	g.Expect(out).To(ContainSubstring(" - GitRepository/"))
+	g.Expect(out).To(ContainSubstring(sourcesPath + " - bitnami.com/v1alpha1/SealedSecret/default/minio-bucket-secret is skipped: kind skipped"))
+	g.Expect(out).To(ContainSubstring(" - source.toolkit.fluxcd.io/v1/GitRepository/"))
 	g.Expect(out).To(ContainSubstring("is skipped: kind skipped"))
-	g.Expect(out).To(ContainSubstring(" - HelmRelease/"))
+	g.Expect(out).To(ContainSubstring(" - helm.toolkit.fluxcd.io/v2/HelmRelease/"))
 }
 
 // TestValidateCmd_SkipFile_DefaultHidesDotfiles verifies that without an
@@ -539,7 +539,7 @@ func TestValidateCmd_StdinDash(t *testing.T) {
 		"--verbose",
 	})
 	g.Expect(err).ToNot(HaveOccurred())
-	g.Expect(out).To(ContainSubstring("stdin - Widget/default/ok-widget is valid"))
+	g.Expect(out).To(ContainSubstring("stdin - example.com/v1/Widget/default/ok-widget is valid"))
 	g.Expect(out).To(ContainSubstring("parsing stdin"))
 }
 
@@ -554,7 +554,7 @@ func TestValidateCmd_StdinBare(t *testing.T) {
 		"--verbose",
 	})
 	g.Expect(err).ToNot(HaveOccurred())
-	g.Expect(out).To(ContainSubstring("stdin - Widget/default/ok-widget is valid"))
+	g.Expect(out).To(ContainSubstring("stdin - example.com/v1/Widget/default/ok-widget is valid"))
 }
 
 func TestValidateCmd_NoArgsNoPipe(t *testing.T) {
@@ -628,7 +628,7 @@ func TestValidateCmd_SkipJSONPath(t *testing.T) {
 		"--schema-location", "./testdata/validate/schemas/{{ .Group }}/{{ .Kind }}_{{ .Version }}.json",
 	})
 	g.Expect(err).To(HaveOccurred())
-	g.Expect(out).To(ContainSubstring("Secret/default/sops-secret is invalid: schema violation"))
+	g.Expect(out).To(ContainSubstring("v1/Secret/default/sops-secret is invalid: schema violation"))
 	g.Expect(out).To(ContainSubstring("additional properties 'sops' not allowed"))
 
 	// With the kind-scoped strip both Secrets validate.
@@ -723,7 +723,7 @@ validate:
 		"--config", cfg,
 	})
 	g.Expect(err).ToNot(HaveOccurred())
-	g.Expect(out).To(ContainSubstring("Widget/default/ok-widget is skipped: kind skipped"))
+	g.Expect(out).To(ContainSubstring("example.com/v1/Widget/default/ok-widget is skipped: kind skipped"))
 	g.Expect(out).To(ContainSubstring("Valid: 0, Invalid: 0, Skipped: 1"))
 }
 
@@ -1630,7 +1630,7 @@ func TestValidateCmd_CELRule_CatalogHelmRelease(t *testing.T) {
 		"--schema-location", "./testdata/validate/schemas/{{ .Group }}/{{ .Kind }}_{{ .Version }}.json",
 	})
 	g.Expect(err).To(HaveOccurred())
-	g.Expect(out).To(ContainSubstring("HelmRelease/apps/webapp is invalid: cel violation"))
+	g.Expect(out).To(ContainSubstring("helm.toolkit.fluxcd.io/v2/HelmRelease/apps/webapp is invalid: cel violation"))
 	g.Expect(out).To(ContainSubstring("/spec: Invalid value: either chart or chartRef must be set"))
 
 	// --skip-cel-rules disables the check; same fixture validates clean.
