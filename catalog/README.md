@@ -14,7 +14,7 @@ via `--schema-location ecosystem` and browsable at https://schemas.fluxoperator.
 | [openshift/api](https://github.com/openshift/api) | v4.22 |
 | [fluxcd/flux2](https://github.com/fluxcd/flux2) | v2.9.5 |
 | [fluxcd/flagger](https://github.com/fluxcd/flagger) | v1.45.0 |
-| [controlplaneio-fluxcd/flux-operator](https://github.com/controlplaneio-fluxcd/flux-operator) | v0.59.0 |
+| [controlplaneio-fluxcd/flux-operator](https://github.com/controlplaneio-fluxcd/flux-operator) | v0.60.0 |
 <!-- versions:end -->
 
 ## Flux APIs
