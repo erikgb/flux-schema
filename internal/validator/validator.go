@@ -84,13 +84,23 @@ type ValidationError struct {
 	Msg  string
 }
 
-// Identifier returns the Flux-canonical object reference used in CLI output:
-// "Kind/Namespace/Name" for namespaced resources, "Kind/Name" otherwise.
+// Identifier returns the fully qualified object reference:
+// "APIVersion/Kind/Namespace/Name" for namespaced resources,
+// "APIVersion/Kind/Name" otherwise.
 func (r Result) Identifier() string {
-	if r.Namespace != "" {
-		return r.Kind + "/" + r.Namespace + "/" + r.Name
+	var b strings.Builder
+
+	for _, part := range []string{r.APIVersion, r.Kind, r.Namespace, r.Name} {
+		if part == "" {
+			continue
+		}
+		if b.Len() > 0 {
+			b.WriteByte('/')
+		}
+		b.WriteString(part)
 	}
-	return r.Kind + "/" + r.Name
+
+	return b.String()
 }
 
 // Options configures a Validator.
