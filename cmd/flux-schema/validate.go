@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"slices"
 	"strings"
 	"time"
@@ -82,6 +83,7 @@ type validateFlags struct {
 	insecureSkipTLSVerify bool
 	configFile            string
 	output                flags.Output
+	outputDir             string
 }
 
 var validateArgs = validateFlags{
@@ -118,6 +120,8 @@ func init() {
 			"(env: "+envConfigFile+", default: <executable>.config)")
 	_ = validateCmd.MarkFlagFilename("config", "yaml", "yml")
 	validateCmd.Flags().VarP(&validateArgs.output, "output", "o", validateArgs.output.Description())
+	validateCmd.Flags().StringVarP(&validateArgs.outputDir, "output-dir", "d", "",
+		"directory where structured report files are written (created if missing)")
 	rootCmd.AddCommand(validateCmd)
 }
 
@@ -281,9 +285,36 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 	var writer outputWriter
 	switch mode {
 	case "text":
+		if validateArgs.outputDir != "" {
+			return fmt.Errorf("output directory is currently not supported for text output")
+		}
 		writer = &textWriter{cmd: cmd, verbose: validateArgs.verbose}
 	default:
-		writer = &reportWriter{writer: cmd.OutOrStdout(), mode: mode}
+		if validateArgs.outputDir != "" {
+			destDir := validateArgs.outputDir
+			if err := os.MkdirAll(destDir, 0o755); err != nil {
+				return fmt.Errorf("create output dir: %w", err)
+			}
+
+			// The validate action script will currently invoke the validate command multiple times.
+			// So in order to support the output-dir flag when used with the script or GitHub Action,
+			// it is required to emit unique filenames.
+			// Ideally, one execution of the validate script should produce one report,
+			// which will make it possible to have a deterministic file name.
+			// But for now we have to use a random or hashed name.
+			f, err := os.CreateTemp(destDir, "flux-validate-*."+mode)
+			if err != nil {
+				return fmt.Errorf("create report file: %w", err)
+			}
+			defer f.Close()
+			if err := f.Chmod(0o644); err != nil {
+				return fmt.Errorf("change report file mode: %w", err)
+			}
+
+			writer = &reportWriter{writer: f, mode: mode}
+		} else {
+			writer = &reportWriter{writer: cmd.OutOrStdout(), mode: mode}
+		}
 	}
 
 	collector := newResultCollector(writer)

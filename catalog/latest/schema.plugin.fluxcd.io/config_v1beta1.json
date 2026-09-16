@@ -71,6 +71,10 @@
           ],
           "type": "string"
         },
+        "outputDirectory": {
+          "description": "OutputDirectory selects the directory where structured report files are written (created if missing).",
+          "type": "string"
+        },
         "schemaLocation": {
           "description": "SchemaLocations contains schema URLs, file paths, or templates to try in order.",
           "items": {

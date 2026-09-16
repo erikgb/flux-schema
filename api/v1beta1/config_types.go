@@ -77,6 +77,10 @@ type ValidateConfig struct {
 	// Output selects the command output format.
 	// +optional
 	Output ConfigOutput `json:"output,omitempty"`
+
+	// OutputDirectory selects the directory where structured report files are written (created if missing).
+	// +optional
+	OutputDirectory string `json:"outputDirectory,omitempty"`
 }
 
 // ConfigOutput is a supported validate command output format.

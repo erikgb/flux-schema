@@ -67,20 +67,21 @@ passed, for example `~/.fluxcd/plugins/flux-schema.config`.
 
 The `validate` section configures defaults for the `flux schema validate` flags.
 
-| Field                   | Description                                                                                                                                                               |
-|-------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `schemaLocation[]`      | Schema URLs, file paths, or templates tried in order. Aliases: `default` (built-in catalog), `ecosystem` ([schemas.fluxoperator.dev](https://schemas.fluxoperator.dev/)). |
-| `skipMissingSchemas`    | Skip documents for which no schema can be found.                                                                                                                          |
-| `skipKind[]`            | Kind or apiVersion/kind patterns excluded from validation.                                                                                                                |
-| `skipJSONPath[]`        | JSON Pointers stripped before validation.                                                                                                                                 |
+| Field                    | Description                                                                                                                                                                  |
+|--------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `schemaLocation[]`       | Schema URLs, file paths, or templates tried in order. Aliases: `default` (built-in catalog), `ecosystem` ([schemas.fluxoperator.dev](https://schemas.fluxoperator.dev/)).    |
+| `skipMissingSchemas`     | Skip documents for which no schema can be found.                                                                                                                             |
+| `skipKind[]`             | Kind or apiVersion/kind patterns excluded from validation.                                                                                                                   |
+| `skipJSONPath[]`         | JSON Pointers stripped before validation.                                                                                                                                    |
 | `skipJSONPathIfAbsent[]` | JSON Pointers whose required-field errors are skipped when the field is absent. CEL is skipped for matching documents with absent paths; present values are still validated. |
-| `skipFile[]`            | Basename glob patterns excluded from validation.                                                                                                                          |
-| `skipCELRules`          | Disable evaluation of `x-kubernetes-validations` CEL rules.                                                                                                               |
-| `verbose`               | Print a line for every document, including valid and skipped.                                                                                                             |
-| `failFast`              | Exit after the first invalid document.                                                                                                                                    |
-| `concurrent`            | Number of concurrent validation workers.                                                                                                                                  |
-| `insecureSkipTLSVerify` | Disable TLS certificate verification when downloading schemas.                                                                                                            |
-| `output`                | Output format: `text`, `json`, or `yaml`.                                                                                                                                 |
+| `skipFile[]`             | Basename glob patterns excluded from validation.                                                                                                                             |
+| `skipCELRules`           | Disable evaluation of `x-kubernetes-validations` CEL rules.                                                                                                                  |
+| `verbose`                | Print a line for every document, including valid and skipped.                                                                                                                |
+| `failFast`               | Exit after the first invalid document.                                                                                                                                       |
+| `concurrent`             | Number of concurrent validation workers.                                                                                                                                     |
+| `insecureSkipTLSVerify`  | Disable TLS certificate verification when downloading schemas.                                                                                                               |
+| `output`                 | Output format: `text`, `json`, or `yaml`.                                                                                                                                    |
+| `outputDirectory`        | Output directory for structured output (`json`, or `yaml`) files. The directory will be created if missing.                                                                  |
 
 When the `output` field is set to `json` or `yaml`, the result has the [Report API](report.md) shape.
 
