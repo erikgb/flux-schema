@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"slices"
 	"strings"
 	"time"
@@ -133,14 +134,11 @@ type sourceBuf struct {
 }
 
 type resultCollector struct {
-	cmd     *cobra.Command
-	mode    string
-	verbose bool
+	outputWriter
 
-	nValid    int
-	nInvalid  int
-	nSkipped  int
-	collected []validator.Result
+	nValid   int
+	nInvalid int
+	nSkipped int
 
 	bufs        map[string]*sourceBuf
 	sourceOrder []string
@@ -148,27 +146,12 @@ type resultCollector struct {
 	currentIdx  int
 }
 
-func newResultCollector(cmd *cobra.Command, mode string, verbose bool) *resultCollector {
+func newResultCollector(w outputWriter) *resultCollector {
 	return &resultCollector{
-		cmd:       cmd,
-		mode:      mode,
-		verbose:   verbose,
-		bufs:      make(map[string]*sourceBuf),
-		completed: make(map[string]bool),
+		outputWriter: w,
+		bufs:         make(map[string]*sourceBuf),
+		completed:    make(map[string]bool),
 	}
-}
-
-func (c *resultCollector) emit(r validator.Result) {
-	// Text mode streams per-result; structured modes buffer so the envelope
-	// can carry the full summary ahead of results[].
-	if c.mode == "text" {
-		if shouldPrint(r.Status, c.verbose) {
-			writeResult(c.cmd, r)
-		}
-		return
-	}
-
-	c.collected = append(c.collected, r)
 }
 
 func (c *resultCollector) add(r validator.Result) {
@@ -217,7 +200,7 @@ func (c *resultCollector) flushContiguous(src string) {
 			return
 		}
 
-		c.emit(r)
+		c.WriteResult(r)
 		delete(buf.pending, buf.nextIdx)
 		buf.nextIdx++
 	}
@@ -239,7 +222,7 @@ func (c *resultCollector) flushRemaining(src string) {
 	slices.Sort(indices)
 
 	for _, i := range indices {
-		c.emit(buf.pending[i])
+		c.WriteResult(buf.pending[i])
 	}
 
 	buf.pending = nil
@@ -295,7 +278,15 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 	stdinOnly := len(inputs) == 1 && inputs[0] == stdinLabel
 	mode := validateArgs.output.String()
 
-	collector := newResultCollector(cmd, mode, validateArgs.verbose)
+	var writer outputWriter
+	switch mode {
+	case "text":
+		writer = &textWriter{cmd: cmd, verbose: validateArgs.verbose}
+	default:
+		writer = &reportWriter{writer: cmd.OutOrStdout(), mode: mode}
+	}
+
+	collector := newResultCollector(writer)
 
 	for r := range v.ValidateSources(ctx, inputs) {
 		collector.add(r)
@@ -309,32 +300,15 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 
 	collector.flushRemainingSources()
 
-	if mode != "text" {
-		summary := apiv1.ReportSummary{
-			Total:   collector.nValid + collector.nInvalid + collector.nSkipped,
-			Valid:   collector.nValid,
-			Invalid: collector.nInvalid,
-			Skipped: collector.nSkipped,
-		}
-		report := validator.NewReport(
-			"flux-schema/"+VERSION,
-			time.Now(),
-			collector.collected,
-			summary,
-		)
-		if err := writeReport(cmd, mode, report); err != nil {
-			return err
-		}
-	} else {
-		writeSummary(
-			cmd,
-			len(collector.bufs),
-			collector.nValid+collector.nInvalid+collector.nSkipped,
-			collector.nValid,
-			collector.nInvalid,
-			collector.nSkipped,
-			stdinOnly,
-		)
+	summary := apiv1.ReportSummary{
+		Total:   collector.nValid + collector.nInvalid + collector.nSkipped,
+		Valid:   collector.nValid,
+		Invalid: collector.nInvalid,
+		Skipped: collector.nSkipped,
+	}
+	err = writer.WriteSummary(summary, len(collector.bufs), stdinOnly)
+	if err != nil {
+		return err
 	}
 
 	if collector.nInvalid > 0 {
@@ -343,31 +317,6 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 		return errSilent
 	}
 	return nil
-}
-
-// writeReport streams report to cmd's output as JSON or YAML. The `$schema`
-// key is JSON-only: it points at a JSON Schema document and carries no
-// meaning for YAML consumers, so we drop it in YAML mode.
-func writeReport(cmd *cobra.Command, mode string, report apiv1.Report) error {
-	switch mode {
-	case "json":
-		enc := json.NewEncoder(cmd.OutOrStdout())
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(report); err != nil {
-			return fmt.Errorf("marshal report: %w", err)
-		}
-		return nil
-	case "yaml":
-		report.Schema = ""
-		data, err := yaml.Marshal(report)
-		if err != nil {
-			return fmt.Errorf("marshal report: %w", err)
-		}
-		cmd.Print(string(data))
-		return nil
-	default:
-		return fmt.Errorf("unsupported output format %q", mode)
-	}
 }
 
 // expandSchemaLocations normalizes each --schema-location value so callers can
@@ -431,40 +380,6 @@ func shouldPrint(s validator.Status, verbose bool) bool {
 	return s == validator.StatusInvalid
 }
 
-func writeResult(cmd *cobra.Command, r validator.Result) {
-	verb := "is invalid"
-	switch r.Status {
-	case validator.StatusValid:
-		verb = "is valid"
-	case validator.StatusSkipped:
-		verb = "is skipped"
-	}
-	if r.Reason != validator.ReasonNone {
-		cmd.Printf("%s - %s %s: %s\n", r.Source, r.Identifier(), verb, r.Reason)
-	} else {
-		cmd.Printf("%s - %s %s\n", r.Source, r.Identifier(), verb)
-	}
-	for _, e := range r.Errors {
-		if e.Path == "" {
-			cmd.Printf("  - %s\n", e.Msg)
-		} else {
-			cmd.Printf("  - %s: %s\n", e.Path, e.Msg)
-		}
-	}
-}
-
-func writeSummary(cmd *cobra.Command, nFiles, nResources, nValid, nInvalid, nSkipped int, stdinOnly bool) {
-	resources := pluralize("resource", nResources)
-	if stdinOnly {
-		cmd.Printf("Summary: %d %s found parsing stdin - Valid: %d, Invalid: %d, Skipped: %d\n",
-			nResources, resources, nValid, nInvalid, nSkipped)
-		return
-	}
-	files := pluralize("file", nFiles)
-	cmd.Printf("Summary: %d %s found in %d %s - Valid: %d, Invalid: %d, Skipped: %d\n",
-		nResources, resources, nFiles, files, nValid, nInvalid, nSkipped)
-}
-
 func pluralize(word string, n int) string {
 	if n == 1 {
 		return word
@@ -524,4 +439,99 @@ func buildValidatorOptions(inputs []string) (validator.Options, error) {
 		opts.Stdin = stdinReader
 	}
 	return opts, nil
+}
+
+type outputWriter interface {
+	WriteResult(validator.Result)
+	WriteSummary(summary apiv1.ReportSummary, nFiles int, stdinOnly bool) error
+}
+
+type textWriter struct {
+	cmd     *cobra.Command
+	verbose bool
+}
+
+func (w *textWriter) WriteResult(r validator.Result) {
+	if !shouldPrint(r.Status, w.verbose) {
+		return
+	}
+
+	verb := "is invalid"
+	switch r.Status {
+	case validator.StatusValid:
+		verb = "is valid"
+	case validator.StatusSkipped:
+		verb = "is skipped"
+	}
+	if r.Reason != validator.ReasonNone {
+		w.cmd.Printf("%s - %s %s: %s\n", r.Source, r.Identifier(), verb, r.Reason)
+	} else {
+		w.cmd.Printf("%s - %s %s\n", r.Source, r.Identifier(), verb)
+	}
+	for _, e := range r.Errors {
+		if e.Path == "" {
+			w.cmd.Printf("  - %s\n", e.Msg)
+		} else {
+			w.cmd.Printf("  - %s: %s\n", e.Path, e.Msg)
+		}
+	}
+}
+
+func (w *textWriter) WriteSummary(s apiv1.ReportSummary, nFiles int, stdinOnly bool) error {
+	resources := pluralize("resource", s.Total)
+	if stdinOnly {
+		w.cmd.Printf("Summary: %d %s found parsing stdin - Valid: %d, Invalid: %d, Skipped: %d\n",
+			s.Total, resources, s.Valid, s.Invalid, s.Skipped)
+		return nil
+	}
+	files := pluralize("file", nFiles)
+	w.cmd.Printf("Summary: %d %s found in %d %s - Valid: %d, Invalid: %d, Skipped: %d\n",
+		s.Total, resources, nFiles, files, s.Valid, s.Invalid, s.Skipped)
+	return nil
+}
+
+type reportWriter struct {
+	writer io.Writer
+	mode   string
+
+	collected []validator.Result
+}
+
+func (w *reportWriter) WriteResult(r validator.Result) {
+	// Structured modes buffer so the envelope can carry the full summary ahead of results[].
+	w.collected = append(w.collected, r)
+}
+
+func (w *reportWriter) WriteSummary(s apiv1.ReportSummary, _ int, _ bool) error {
+	report := validator.NewReport(
+		"flux-schema/"+VERSION,
+		time.Now(),
+		w.collected,
+		s,
+	)
+
+	switch w.mode {
+	case "json":
+		enc := json.NewEncoder(w.writer)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(report); err != nil {
+			return fmt.Errorf("marshal report: %w", err)
+		}
+		return nil
+	case "yaml":
+		// The `$schema` key is JSON-only: it points at a JSON Schema document
+		// and carries no meaning for YAML consumers, so we drop it in YAML mode.
+		report.Schema = ""
+		data, err := yaml.Marshal(report)
+		if err != nil {
+			return fmt.Errorf("marshal report: %w", err)
+		}
+		_, err = w.writer.Write(data)
+		if err != nil {
+			return fmt.Errorf("write report: %w", err)
+		}
+		return nil
+	default:
+		return fmt.Errorf("unsupported output format %q", w.mode)
+	}
 }
