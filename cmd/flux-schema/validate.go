@@ -120,6 +120,156 @@ func init() {
 	rootCmd.AddCommand(validateCmd)
 }
 
+// Reorder buffer: workers complete documents out of order, but we want
+// deterministic (source, docIndex) output. For each source we track the
+// next expected docIndex and a pending map; results for the source at
+// sourceOrder[currentIdx] flush as soon as their docIndex matches
+// nextIdx. The validator emits a Final sentinel once a source is fully
+// drained, which lets currentIdx advance mid-stream — so all sources
+// stream output in arrival order rather than only the first one.
+type sourceBuf struct {
+	nextIdx int
+	pending map[int]validator.Result
+}
+
+type resultCollector struct {
+	cmd     *cobra.Command
+	mode    string
+	verbose bool
+
+	nValid    int
+	nInvalid  int
+	nSkipped  int
+	collected []validator.Result
+
+	bufs        map[string]*sourceBuf
+	sourceOrder []string
+	completed   map[string]bool
+	currentIdx  int
+}
+
+func newResultCollector(cmd *cobra.Command, mode string, verbose bool) *resultCollector {
+	return &resultCollector{
+		cmd:       cmd,
+		mode:      mode,
+		verbose:   verbose,
+		bufs:      make(map[string]*sourceBuf),
+		completed: make(map[string]bool),
+	}
+}
+
+func (c *resultCollector) emit(r validator.Result) {
+	// Text mode streams per-result; structured modes buffer so the envelope
+	// can carry the full summary ahead of results[].
+	if c.mode == "text" {
+		if shouldPrint(r.Status, c.verbose) {
+			writeResult(c.cmd, r)
+		}
+		return
+	}
+
+	c.collected = append(c.collected, r)
+}
+
+func (c *resultCollector) add(r validator.Result) {
+	if r.Final {
+		c.completed[r.Source] = true
+		c.tryAdvance()
+		return
+	}
+
+	switch r.Status {
+	case validator.StatusValid:
+		c.nValid++
+	case validator.StatusInvalid:
+		c.nInvalid++
+	case validator.StatusSkipped:
+		c.nSkipped++
+	}
+
+	buf, ok := c.bufs[r.Source]
+	if !ok {
+		buf = &sourceBuf{
+			nextIdx: 1,
+			pending: map[int]validator.Result{},
+		}
+		c.bufs[r.Source] = buf
+		c.sourceOrder = append(c.sourceOrder, r.Source)
+	}
+
+	buf.pending[r.DocIndex] = r
+
+	if c.currentIdx < len(c.sourceOrder) &&
+		c.sourceOrder[c.currentIdx] == r.Source {
+		c.flushContiguous(r.Source)
+	}
+}
+
+func (c *resultCollector) flushContiguous(src string) {
+	buf := c.bufs[src]
+	if buf == nil {
+		return
+	}
+
+	for {
+		r, ok := buf.pending[buf.nextIdx]
+		if !ok {
+			return
+		}
+
+		c.emit(r)
+		delete(buf.pending, buf.nextIdx)
+		buf.nextIdx++
+	}
+}
+
+// flushRemaining drains pending entries past a gap (left by validateDoc
+// skipping content-free YAML) in sorted docIndex order. Only safe to
+// call once a source is known to be fully drained.
+func (c *resultCollector) flushRemaining(src string) {
+	buf := c.bufs[src]
+	if buf == nil || len(buf.pending) == 0 {
+		return
+	}
+
+	indices := make([]int, 0, len(buf.pending))
+	for i := range buf.pending {
+		indices = append(indices, i)
+	}
+	slices.Sort(indices)
+
+	for _, i := range indices {
+		c.emit(buf.pending[i])
+	}
+
+	buf.pending = nil
+}
+
+func (c *resultCollector) tryAdvance() {
+	for c.currentIdx < len(c.sourceOrder) {
+		src := c.sourceOrder[c.currentIdx]
+
+		c.flushContiguous(src)
+		if !c.completed[src] {
+			return
+		}
+
+		c.flushRemaining(src)
+		c.currentIdx++
+	}
+}
+
+func (c *resultCollector) flushRemainingSources() {
+	// Channel closed: every source we registered should have received a
+	// Final sentinel and tryAdvance should already have flushed and advanced
+	// past it. Defensive flush for any source missed (e.g. ctx cancellation
+	// dropped a sentinel mid-flight).
+	for _, src := range c.sourceOrder[c.currentIdx:] {
+		c.flushContiguous(src)
+		c.flushRemaining(src)
+	}
+}
+
 func validateCmdRun(cmd *cobra.Command, args []string) error {
 	if err := loadValidateConfig(cmd); err != nil {
 		return err
@@ -145,110 +295,10 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 	stdinOnly := len(inputs) == 1 && inputs[0] == stdinLabel
 	mode := validateArgs.output.String()
 
-	files := make(map[string]struct{})
-	var nValid, nInvalid, nSkipped int
-	var collected []validator.Result
-
-	// Text mode streams per-result; structured modes buffer so the envelope
-	// can carry the full summary ahead of results[].
-	emit := func(r validator.Result) {
-		if mode == "text" {
-			if shouldPrint(r.Status, validateArgs.verbose) {
-				writeResult(cmd, r)
-			}
-			return
-		}
-		collected = append(collected, r)
-	}
-
-	// Reorder buffer: workers complete documents out of order, but we want
-	// deterministic (source, docIndex) output. For each source we track the
-	// next expected docIndex and a pending map; results for the source at
-	// sourceOrder[currentIdx] flush as soon as their docIndex matches
-	// nextIdx. The validator emits a Final sentinel once a source is fully
-	// drained, which lets currentIdx advance mid-stream — so all sources
-	// stream output in arrival order rather than only the first one.
-	type sourceBuf struct {
-		nextIdx int
-		pending map[int]validator.Result
-	}
-	bufs := map[string]*sourceBuf{}
-	var sourceOrder []string
-	completed := map[string]bool{}
-	currentIdx := 0
-
-	flushContiguous := func(src string) {
-		buf := bufs[src]
-		if buf == nil {
-			return
-		}
-		for {
-			r, ok := buf.pending[buf.nextIdx]
-			if !ok {
-				return
-			}
-			emit(r)
-			delete(buf.pending, buf.nextIdx)
-			buf.nextIdx++
-		}
-	}
-
-	// flushRemaining drains pending entries past a gap (left by validateDoc
-	// skipping content-free YAML) in sorted docIndex order. Only safe to
-	// call once a source is known to be fully drained.
-	flushRemaining := func(src string) {
-		buf := bufs[src]
-		if buf == nil || len(buf.pending) == 0 {
-			return
-		}
-		indices := make([]int, 0, len(buf.pending))
-		for i := range buf.pending {
-			indices = append(indices, i)
-		}
-		slices.Sort(indices)
-		for _, i := range indices {
-			emit(buf.pending[i])
-		}
-		buf.pending = nil
-	}
-
-	tryAdvance := func() {
-		for currentIdx < len(sourceOrder) {
-			src := sourceOrder[currentIdx]
-			flushContiguous(src)
-			if !completed[src] {
-				return
-			}
-			flushRemaining(src)
-			currentIdx++
-		}
-	}
+	collector := newResultCollector(cmd, mode, validateArgs.verbose)
 
 	for r := range v.ValidateSources(ctx, inputs) {
-		if r.Final {
-			completed[r.Source] = true
-			tryAdvance()
-			continue
-		}
-
-		files[r.Source] = struct{}{}
-		switch r.Status {
-		case validator.StatusValid:
-			nValid++
-		case validator.StatusInvalid:
-			nInvalid++
-		case validator.StatusSkipped:
-			nSkipped++
-		}
-
-		if _, ok := bufs[r.Source]; !ok {
-			bufs[r.Source] = &sourceBuf{nextIdx: 1, pending: map[int]validator.Result{}}
-			sourceOrder = append(sourceOrder, r.Source)
-		}
-		bufs[r.Source].pending[r.DocIndex] = r
-		if currentIdx < len(sourceOrder) && sourceOrder[currentIdx] == r.Source {
-			flushContiguous(r.Source)
-		}
+		collector.add(r)
 
 		// Fail-fast cancels mid-stream; the defensive flush below still prints
 		// any buffered invalid even when an earlier source lost its Final.
@@ -257,31 +307,37 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Channel closed: every source we registered should have received a
-	// Final sentinel and tryAdvance should already have flushed and advanced
-	// past it. Defensive flush for any source missed (e.g. ctx cancellation
-	// dropped a sentinel mid-flight).
-	for _, src := range sourceOrder[currentIdx:] {
-		flushContiguous(src)
-		flushRemaining(src)
-	}
+	collector.flushRemainingSources()
 
 	if mode != "text" {
 		summary := apiv1.ReportSummary{
-			Total:   nValid + nInvalid + nSkipped,
-			Valid:   nValid,
-			Invalid: nInvalid,
-			Skipped: nSkipped,
+			Total:   collector.nValid + collector.nInvalid + collector.nSkipped,
+			Valid:   collector.nValid,
+			Invalid: collector.nInvalid,
+			Skipped: collector.nSkipped,
 		}
-		report := validator.NewReport("flux-schema/"+VERSION, time.Now(), collected, summary)
+		report := validator.NewReport(
+			"flux-schema/"+VERSION,
+			time.Now(),
+			collector.collected,
+			summary,
+		)
 		if err := writeReport(cmd, mode, report); err != nil {
 			return err
 		}
 	} else {
-		writeSummary(cmd, len(files), nValid+nInvalid+nSkipped, nValid, nInvalid, nSkipped, stdinOnly)
+		writeSummary(
+			cmd,
+			len(collector.bufs),
+			collector.nValid+collector.nInvalid+collector.nSkipped,
+			collector.nValid,
+			collector.nInvalid,
+			collector.nSkipped,
+			stdinOnly,
+		)
 	}
 
-	if nInvalid > 0 {
+	if collector.nInvalid > 0 {
 		// Summary line already communicates the failure; exit non-zero
 		// via errSilent so we don't print a redundant "✗ ..." line.
 		return errSilent
