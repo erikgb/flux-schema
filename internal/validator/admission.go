@@ -4,6 +4,7 @@
 package validator
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -57,7 +58,7 @@ func (v *admissionValidator) Validate(obj map[string]any) []ValidationError {
 		return nil
 	}
 
-	errs := schemaobjectmeta.Validate(nil, validatedMap, v.structural, false)
+	errs := schemaobjectmeta.Validate(context.Background(), nil, validatedMap, v.structural, false)
 	errs = append(errs, structurallisttype.ValidateListSetsAndMaps(nil, v.structural, validatedMap)...)
 	return fieldErrorsToValidationErrors(errs)
 }
