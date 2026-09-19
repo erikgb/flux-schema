@@ -5,6 +5,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -1495,6 +1496,68 @@ validate:
 `)
 	_, err := executeCommand([]string{"validate", "--config", cfg})
 	g.Expect(err).To(MatchError(ContainSubstring("unsupported output format")))
+}
+
+func TestValidateCmd_OutputDirectory(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+
+	reportDir := t.TempDir()
+	_, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"-o", "json",
+		"-d", reportDir,
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	reportFiles, err := os.ReadDir(reportDir)
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(reportFiles).To(HaveLen(1))
+
+	data, err := os.ReadFile(filepath.Join(reportDir, reportFiles[0].Name()))
+	g.Expect(err).ToNot(HaveOccurred())
+
+	env := decodeReport(t, string(data))
+	g.Expect(env.APIVersion).To(Equal(apiv1.GroupVersion.String()))
+	g.Expect(env.Kind).To(Equal(apiv1.ReportKind))
+	g.Expect(env.Report.Summary.Valid).To(Equal(1))
+}
+
+func TestValidateCmd_OutputDirectory_Config(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+
+	reportDir := t.TempDir()
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", fmt.Sprintf(`apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
+validate:
+  output: json
+  outputDirectory: %s
+`, reportDir))
+
+	_, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"--config", cfg,
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	reportFiles, err := os.ReadDir(reportDir)
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(reportFiles).To(HaveLen(1))
+
+	data, err := os.ReadFile(filepath.Join(reportDir, reportFiles[0].Name()))
+	g.Expect(err).ToNot(HaveOccurred())
+
+	env := decodeReport(t, string(data))
+	g.Expect(env.APIVersion).To(Equal(apiv1.GroupVersion.String()))
+	g.Expect(env.Kind).To(Equal(apiv1.ReportKind))
+	g.Expect(env.Report.Summary.Valid).To(Equal(1))
 }
 
 // celGadgetCRDYAML defines a CRD whose spec carries an x-kubernetes-validations

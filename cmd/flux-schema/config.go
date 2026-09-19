@@ -147,6 +147,9 @@ func applyValidateConfig(cmd *cobra.Command, cfg *apiv1.ValidateConfig, args *va
 			return fmt.Errorf("config output: %w", err)
 		}
 	}
+	if !flags.Changed("output-dir") {
+		args.outputDir = cfg.OutputDirectory
+	}
 	return nil
 }
 

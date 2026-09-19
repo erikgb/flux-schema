@@ -22,21 +22,22 @@ A non-zero exit code is returned when any document is invalid or errored.
 
 ## Flags
 
-| Flag                         | Description                                                                                              |
-|------------------------------|----------------------------------------------------------------------------------------------------------|
+| Flag                         | Description                                                                                                                                     |
+|------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
 | `-s, --schema-location`      | URL or file path for schemas (repeatable, tried in order); `default` points at the built-in catalog, `ecosystem` at the CNCF ecosystem catalog. |
-| `--skip-missing-schemas`     | Skip documents for which no schema can be found.                                                         |
-| `--skip-kind`                | Skip documents matching `kind` or `apiVersion/kind` (repeatable).                                        |
-| `--skip-json-path`           | Strip a JSON Pointer field before validation, optionally scoped: `[apiVersion/kind:]/path` (repeatable). |
-| `--skip-json-path-if-absent` | Skip missing required-field errors for a JSON Pointer field, optionally scoped: `[apiVersion/kind:]/path` (repeatable). |
-| `--skip-file`                | Glob pattern matched against files and dirs; defaults to skipping dotfiles and dot-dirs (repeatable).    |
-| `--skip-cel-rules`           | Skip evaluation of `x-kubernetes-validations` CEL rules.                                                 |
-| `--fail-fast`                | Exit after the first invalid document.                                                                   |
-| `--concurrent`               | Number of concurrent workers (default 8).                                                                |
-| `--insecure-skip-tls-verify` | Disable TLS certificate verification when fetching schemas over HTTPS.                                   |
-| `-v, --verbose`              | Print a line for every document, including valid and skipped ones.                                       |
-| `-o, --output`               | Output format, one of `text`, `json` or `yaml` (default: `text`).                                        |                                                                          |                                                   |
-| `--config`                   | Path to a YAML file supplying default values for validate flags (env: `FLUX_SCHEMA_CONFIG`).             |
+| `--skip-missing-schemas`     | Skip documents for which no schema can be found.                                                                                                |
+| `--skip-kind`                | Skip documents matching `kind` or `apiVersion/kind` (repeatable).                                                                               |
+| `--skip-json-path`           | Strip a JSON Pointer field before validation, optionally scoped: `[apiVersion/kind:]/path` (repeatable).                                        |
+| `--skip-json-path-if-absent` | Skip missing required-field errors for a JSON Pointer field, optionally scoped: `[apiVersion/kind:]/path` (repeatable).                         |
+| `--skip-file`                | Glob pattern matched against files and dirs; defaults to skipping dotfiles and dot-dirs (repeatable).                                           |
+| `--skip-cel-rules`           | Skip evaluation of `x-kubernetes-validations` CEL rules.                                                                                        |
+| `--fail-fast`                | Exit after the first invalid document.                                                                                                          |
+| `--concurrent`               | Number of concurrent workers (default 8).                                                                                                       |
+| `--insecure-skip-tls-verify` | Disable TLS certificate verification when fetching schemas over HTTPS.                                                                          |
+| `-v, --verbose`              | Print a line for every document, including valid and skipped ones.                                                                              |
+| `-o, --output`               | Output format, one of `text`, `json` or `yaml` (default: `text`).                                                                               |                                                                          |                                                   |
+| `-d, --output-dir`           | Output directory where structured report files are written (created if missing).                                                                |                                                                          |                                                   |
+| `--config`                   | Path to a YAML file supplying default values for validate flags (env: `FLUX_SCHEMA_CONFIG`).                                                    |
 
 ## Schema location
 
@@ -157,6 +158,9 @@ machine-readable report instead of plain text:
 ```shell
 flux schema validate ./manifests -o json
 ```
+
+Structured reports may also be emitted as files into a directory by using the
+`--output-dir/-d` flag: `-d /report-dir`. The directory will be created if missing.
 
 Example JSON output:
 
