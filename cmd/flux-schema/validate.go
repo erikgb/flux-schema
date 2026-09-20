@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fluxcd/flux-schema/internal/junitxml"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 
@@ -69,6 +70,8 @@ var validateCmd = &cobra.Command{
 	RunE: validateCmdRun,
 }
 
+var validateOutputs = []string{"text", "yaml", "json", "junit"}
+
 type validateFlags struct {
 	schemaLocations       []string
 	skipMissingSchemas    bool
@@ -92,6 +95,8 @@ var validateArgs = validateFlags{
 }
 
 func init() {
+	outputValue := flag.NewOutputValue(&validateArgs.output, validateOutputs...)
+
 	validateCmd.Flags().StringArrayVarP(&validateArgs.schemaLocations, "schema-location", "s", nil,
 		"URL or file path for schemas (repeatable); 'default' points at the built-in catalog, 'ecosystem' at schemas.fluxoperator.dev")
 	validateCmd.Flags().BoolVar(&validateArgs.skipMissingSchemas, "skip-missing-schemas", false,
@@ -119,7 +124,7 @@ func init() {
 		"path to a YAML file supplying default values for validate flags "+
 			"(env: "+envConfigFile+", default: <executable>.config)")
 	_ = validateCmd.MarkFlagFilename("config", "yaml", "yml")
-	validateCmd.Flags().VarP(&validateArgs.output, "output", "o", validateArgs.output.Description())
+	validateCmd.Flags().VarP(outputValue, "output", "o", outputValue.Description())
 	validateCmd.Flags().StringVarP(&validateArgs.outputDir, "output-dir", "d", "",
 		"directory where structured report files are written (created if missing)")
 	rootCmd.AddCommand(validateCmd)
@@ -296,13 +301,19 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 				return fmt.Errorf("create output dir: %w", err)
 			}
 
+			fileExt := mode
+			// Special case for JUnit XML reports for now.
+			// Consider functional constants
+			if mode == "junit" {
+				fileExt = "xml"
+			}
 			// The validate action script will currently invoke the validate command multiple times.
 			// So in order to support the output-dir flag when used with the script or GitHub Action,
 			// it is required to emit unique filenames.
 			// Ideally, one execution of the validate script should produce one report,
 			// which will make it possible to have a deterministic file name.
 			// But for now we have to use a random or hashed name.
-			f, err := os.CreateTemp(destDir, "flux-validate-*."+mode)
+			f, err := os.CreateTemp(destDir, "flux-validate-*."+fileExt)
 			if err != nil {
 				return fmt.Errorf("create report file: %w", err)
 			}
@@ -560,6 +571,12 @@ func (w *reportWriter) WriteSummary(s apiv1.ReportSummary, _ int, _ bool) error 
 		_, err = w.writer.Write(data)
 		if err != nil {
 			return fmt.Errorf("write report: %w", err)
+		}
+		return nil
+	case "junit":
+		testSuites := junitxml.FromReport(report)
+		if err := testSuites.Write(w.writer); err != nil {
+			return fmt.Errorf("write JUnitXML report: %w", err)
 		}
 		return nil
 	default:

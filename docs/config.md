@@ -80,10 +80,14 @@ The `validate` section configures defaults for the `flux schema validate` flags.
 | `failFast`               | Exit after the first invalid document.                                                                                                                                       |
 | `concurrent`             | Number of concurrent validation workers.                                                                                                                                     |
 | `insecureSkipTLSVerify`  | Disable TLS certificate verification when downloading schemas.                                                                                                               |
-| `output`                 | Output format: `text`, `json`, or `yaml`.                                                                                                                                    |
-| `outputDirectory`        | Output directory for structured output (`json`, or `yaml`) files. The directory will be created if missing.                                                                  |
+| `output`                 | Output format: `text`, `json`, `yaml` or `junit`.                                                                                                                            |
+| `outputDirectory`        | Output directory for structured output (`json`, `yaml` or `junit` XML) files. The directory will be created if missing.                                                      |
 
 When the `output` field is set to `json` or `yaml`, the result has the [Report API](report.md) shape.
+When it is set to `junit`, the result is emitted as JUnit XML for integration with CI/CD systems that
+support JUnit test reports. The JUnit XML format is not formally standardized and is therefore
+[documented separately](junit.md).
+
 
 ### Explain
 

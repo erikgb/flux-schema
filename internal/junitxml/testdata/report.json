@@ -1,0 +1,86 @@
+{
+  "kind": "Report",
+  "apiVersion": "schema.plugin.fluxcd.io/v1beta1",
+  "$schema": "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/report-v1beta1.json",
+  "report": {
+    "reporter": "flux-schema/v0.13.0",
+    "timestamp": "2026-09-24T11:04:31Z",
+    "summary": {
+      "total": 5,
+      "valid": 1,
+      "invalid": 3,
+      "skipped": 1
+    },
+    "results": [
+      {
+        "resource": null,
+        "source": "plain/invalid.yaml",
+        "idx": 1,
+        "status": "invalid",
+        "reason": "yaml-parse-error",
+        "violations": [
+          {
+            "message": "line 3: did not find expected key"
+          }
+        ]
+      },
+      {
+        "resource": {
+          "apiVersion": "example.com/v1",
+          "kind": "Skip",
+          "namespace": "default",
+          "name": "my-skip"
+        },
+        "source": "plain/skipped.yaml",
+        "idx": 1,
+        "status": "skipped",
+        "reason": "kind-skipped"
+      },
+      {
+        "resource": {
+          "apiVersion": "example.com/v1",
+          "kind": "Widget",
+          "namespace": "default",
+          "name": "my-widget"
+        },
+        "source": "plain/invalid-kind.yaml",
+        "idx": 1,
+        "status": "invalid",
+        "reason": "schema-not-found",
+        "violations": [
+          {
+            "message": "no schema for kind \"Widget\" in version \"example.com/v1\""
+          }
+        ]
+      },
+      {
+        "resource": {
+          "apiVersion": "v1",
+          "kind": "Secret",
+          "namespace": "default",
+          "name": "my-secret"
+        },
+        "source": "plain/secret.yaml",
+        "idx": 1,
+        "status": "invalid",
+        "reason": "schema-violation",
+        "violations": [
+          {
+            "message": "additional properties 'foo' not allowed"
+          }
+        ]
+      },
+      {
+        "resource": {
+          "apiVersion": "v1",
+          "kind": "ConfigMap",
+          "namespace": "default",
+          "name": "my-configmap"
+        },
+        "source": "plain/config-map.yaml",
+        "idx": 1,
+        "status": "valid"
+      }
+    ]
+  }
+}

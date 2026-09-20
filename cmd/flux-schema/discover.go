@@ -39,6 +39,8 @@ var discoverCmd = &cobra.Command{
 	RunE: discoverCmdRun,
 }
 
+var discoverOutputs = []string{"text", "yaml", "json"}
+
 type discoverFlags struct {
 	skipFiles []string
 	output    flag.Output
@@ -47,10 +49,12 @@ type discoverFlags struct {
 var discoverArgs = discoverFlags{output: "text"}
 
 func init() {
+	outputValue := flag.NewOutputValue(&discoverArgs.output, discoverOutputs...)
+
 	discoverCmd.Flags().StringArrayVar(&discoverArgs.skipFiles, "skip-file", nil,
 		"glob pattern matched against files and dirs "+
 			"defaults to skipping dotfiles and dot-dirs (repeatable)")
-	discoverCmd.Flags().VarP(&discoverArgs.output, "output", "o", discoverArgs.output.Description())
+	discoverCmd.Flags().VarP(outputValue, "output", "o", outputValue.Description())
 	rootCmd.AddCommand(discoverCmd)
 }
 

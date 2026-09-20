@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="flux-schema" tests="5" failures="3" skipped="1">
+    <testsuite name="flux-schema/v0.13.0" tests="5" failures="3" skipped="1">
+        <testcase classname="plain/invalid.yaml" name="plain/invalid.yaml" file="plain/invalid.yaml">
+            <failure message="yaml-parse-error" type="yaml-parse-error">line 3: did not find expected key</failure>
+        </testcase>
+        <testcase classname="example.com/v1/Skip" name="default/my-skip" file="plain/skipped.yaml">
+            <skipped>kind-skipped</skipped>
+        </testcase>
+        <testcase classname="example.com/v1/Widget" name="default/my-widget" file="plain/invalid-kind.yaml">
+            <failure message="schema-not-found" type="schema-not-found">no schema for kind &#34;Widget&#34; in version &#34;example.com/v1&#34;</failure>
+        </testcase>
+        <testcase classname="v1/Secret" name="default/my-secret" file="plain/secret.yaml">
+            <failure message="schema-violation" type="schema-violation">additional properties &#39;foo&#39; not allowed</failure>
+        </testcase>
+        <testcase classname="v1/ConfigMap" name="default/my-configmap" file="plain/config-map.yaml"></testcase>
+    </testsuite>
+</testsuites>

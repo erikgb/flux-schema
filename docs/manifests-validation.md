@@ -35,7 +35,7 @@ A non-zero exit code is returned when any document is invalid or errored.
 | `--concurrent`               | Number of concurrent workers (default 8).                                                                                                       |
 | `--insecure-skip-tls-verify` | Disable TLS certificate verification when fetching schemas over HTTPS.                                                                          |
 | `-v, --verbose`              | Print a line for every document, including valid and skipped ones.                                                                              |
-| `-o, --output`               | Output format, one of `text`, `json` or `yaml` (default: `text`).                                                                               |                                                                          |                                                   |
+| `-o, --output`               | Output format, one of `text`, `json`, `yaml` or `junit` (default: `text`).                                                                      |                                                                          |                                                   |
 | `-d, --output-dir`           | Output directory where structured report files are written (created if missing).                                                                |                                                                          |                                                   |
 | `--config`                   | Path to a YAML file supplying default values for validate flags (env: `FLUX_SCHEMA_CONFIG`).                                                    |
 
@@ -152,15 +152,21 @@ manifests/sources.yaml - v1/Secret/apps/auth-sops is skipped: kind skipped
 Summary: 5 resources found in 2 files - Valid: 1, Invalid: 3, Skipped: 1
 ```
 
-For CI pipelines and tooling, pass `-o json` (or `-o yaml`) to emit a
-machine-readable report instead of plain text:
+For CI pipelines and tooling, use `-o` to select a structured output format:
+`json`, `yaml`, or `junit`:
 
 ```shell
 flux schema validate ./manifests -o json
 ```
 
+The `json` and `yaml` formats emit the structured validation report described
+by [`report-v1beta1.json`](report-v1beta1.json).
+The `junit` format emits [JUnit XML](junit.md), which can be consumed by CI
+systems to present validation failures as test results, making them easier to
+inspect directly in the CI interface.
+
 Structured reports may also be emitted as files into a directory by using the
-`--output-dir/-d` flag: `-d /report-dir`. The directory will be created if missing.
+`-d` flag: `-d /report-dir`. The directory will be created if missing.
 
 Example JSON output:
 
