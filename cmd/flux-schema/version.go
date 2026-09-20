@@ -10,7 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/fluxcd/flux-schema/internal/flags"
+	"github.com/fluxcd/flux-schema/internal/flag"
 )
 
 var versionCmd = &cobra.Command{
@@ -34,7 +34,7 @@ type versionInfo struct {
 }
 
 type versionFlags struct {
-	output flags.Output
+	output flag.Output
 }
 
 var versionArgs = versionFlags{

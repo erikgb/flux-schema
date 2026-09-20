@@ -14,7 +14,7 @@ import (
 	"github.com/fluxcd/pkg/tar"
 
 	"github.com/fluxcd/flux-schema/internal/extractor"
-	"github.com/fluxcd/flux-schema/internal/flags"
+	"github.com/fluxcd/flux-schema/internal/flag"
 )
 
 var extractCRDCmd = &cobra.Command{
@@ -36,12 +36,12 @@ var extractCRDCmd = &cobra.Command{
 }
 
 type extractCRDFlags struct {
-	flags.ExtractOutput
+	flag.ExtractOutput
 	outputArchive string
 }
 
 var extractCRDArgs = extractCRDFlags{
-	ExtractOutput: flags.NewExtractOutput(),
+	ExtractOutput: flag.NewExtractOutput(),
 }
 
 func init() {

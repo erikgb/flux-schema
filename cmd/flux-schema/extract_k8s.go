@@ -16,7 +16,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/fluxcd/flux-schema/internal/extractor"
-	"github.com/fluxcd/flux-schema/internal/flags"
+	"github.com/fluxcd/flux-schema/internal/flag"
 	"github.com/fluxcd/flux-schema/internal/useragent"
 )
 
@@ -40,12 +40,12 @@ var extractK8sCmd = &cobra.Command{
 }
 
 type extractK8sFlags struct {
-	flags.ExtractOutput
+	flag.ExtractOutput
 	k8sVersion string
 }
 
 var extractK8sArgs = extractK8sFlags{
-	ExtractOutput: flags.NewExtractOutput(),
+	ExtractOutput: flag.NewExtractOutput(),
 }
 
 func init() {

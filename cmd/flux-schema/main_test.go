@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"github.com/fluxcd/flux-schema/internal/flags"
+	"github.com/fluxcd/flux-schema/internal/flag"
 	"github.com/fluxcd/flux-schema/internal/validator"
 )
 
@@ -49,11 +49,11 @@ func resetCmdArgs() {
 	rootArgs.timeout = timeout
 
 	versionArgs = versionFlags{output: "text"}
-	extractCRDArgs = extractCRDFlags{ExtractOutput: flags.NewExtractOutput()}
-	extractK8sArgs = extractK8sFlags{ExtractOutput: flags.NewExtractOutput()}
-	extractOpenShiftArgs = extractOpenShiftFlags{ExtractOutput: flags.NewExtractOutput()}
+	extractCRDArgs = extractCRDFlags{ExtractOutput: flag.NewExtractOutput()}
+	extractK8sArgs = extractK8sFlags{ExtractOutput: flag.NewExtractOutput()}
+	extractOpenShiftArgs = extractOpenShiftFlags{ExtractOutput: flag.NewExtractOutput()}
 	validateArgs = validateFlags{concurrent: validator.DefaultWorkers, output: "text"}
-	explainArgs = explainFlags{output: flags.ExplainOutputPlaintext}
+	explainArgs = explainFlags{output: flag.ExplainOutputPlaintext}
 	discoverArgs = discoverFlags{output: "text"}
 
 	// pflag.Flag.Changed persists across Execute calls on the shared rootCmd,

@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	explainer "github.com/fluxcd/flux-schema/internal/explain"
-	"github.com/fluxcd/flux-schema/internal/flags"
+	"github.com/fluxcd/flux-schema/internal/flag"
 	"github.com/fluxcd/flux-schema/internal/validator"
 )
 
@@ -47,14 +47,14 @@ var explainCmd = &cobra.Command{
 
 type explainFlags struct {
 	apiVersion            string
-	output                flags.ExplainOutput
+	output                flag.ExplainOutput
 	recursive             bool
 	schemaLocations       []string
 	insecureSkipTLSVerify bool
 	configFile            string
 }
 
-var explainArgs = explainFlags{output: flags.ExplainOutputPlaintext}
+var explainArgs = explainFlags{output: flag.ExplainOutputPlaintext}
 
 func init() {
 	explainCmd.Long = strings.ReplaceAll(explainCmd.Long, configDefaultPlaceholder, defaultConfigDescription())
