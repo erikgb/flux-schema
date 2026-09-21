@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	apiv1 "github.com/fluxcd/flux-schema/api/v1beta1"
-	"github.com/fluxcd/flux-schema/internal/flags"
+	"github.com/fluxcd/flux-schema/internal/flag"
 	"github.com/fluxcd/flux-schema/internal/validator"
 )
 
@@ -82,7 +82,7 @@ type validateFlags struct {
 	concurrent            int
 	insecureSkipTLSVerify bool
 	configFile            string
-	output                flags.Output
+	output                flag.Output
 	outputDir             string
 }
 

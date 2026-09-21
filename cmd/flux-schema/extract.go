@@ -18,7 +18,7 @@ import (
 	explainer "github.com/fluxcd/flux-schema/internal/explain"
 	"github.com/fluxcd/flux-schema/internal/extractor"
 	"github.com/fluxcd/flux-schema/internal/fields"
-	"github.com/fluxcd/flux-schema/internal/flags"
+	"github.com/fluxcd/flux-schema/internal/flag"
 	"github.com/fluxcd/flux-schema/internal/tmpl"
 )
 
@@ -33,7 +33,7 @@ func init() {
 
 // stripExplainMetadataForOutput applies the requested explain metadata level
 // before the schema is written.
-func stripExplainMetadataForOutput(node any, out flags.ExtractOutput) {
+func stripExplainMetadataForOutput(node any, out flag.ExtractOutput) {
 	switch {
 	case out.WithExplainMetadata:
 		return
@@ -47,7 +47,7 @@ func stripExplainMetadataForOutput(node any, out flags.ExtractOutput) {
 // runSwaggerExtract is the shared `extract k8s`/`extract openshift` pipeline:
 // it creates the output dir, runs extract on the swagger data, optionally
 // strips descriptions, writes each schema, and reports per-document failures.
-func runSwaggerExtract(cmd *cobra.Command, source string, data []byte, out flags.ExtractOutput,
+func runSwaggerExtract(cmd *cobra.Command, source string, data []byte, out flag.ExtractOutput,
 	extract func([]byte) ([]extractor.Schema, []error),
 ) error {
 	destDir := out.Dir

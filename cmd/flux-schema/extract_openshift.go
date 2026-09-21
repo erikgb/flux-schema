@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/fluxcd/flux-schema/internal/extractor"
-	"github.com/fluxcd/flux-schema/internal/flags"
+	"github.com/fluxcd/flux-schema/internal/flag"
 )
 
 const defaultOpenShiftSwaggerURL = "https://raw.githubusercontent.com/openshift/api/%s/openapi/openapi.json"
@@ -31,12 +31,12 @@ var extractOpenShiftCmd = &cobra.Command{
 }
 
 type extractOpenShiftFlags struct {
-	flags.ExtractOutput
+	flag.ExtractOutput
 	ref string
 }
 
 var extractOpenShiftArgs = extractOpenShiftFlags{
-	ExtractOutput: flags.NewExtractOutput(),
+	ExtractOutput: flag.NewExtractOutput(),
 }
 
 func init() {

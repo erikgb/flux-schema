@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	apiv1 "github.com/fluxcd/flux-schema/api/v1beta1"
-	"github.com/fluxcd/flux-schema/internal/flags"
+	"github.com/fluxcd/flux-schema/internal/flag"
 	"github.com/fluxcd/flux-schema/internal/inventory"
 )
 
@@ -41,7 +41,7 @@ var discoverCmd = &cobra.Command{
 
 type discoverFlags struct {
 	skipFiles []string
-	output    flags.Output
+	output    flag.Output
 }
 
 var discoverArgs = discoverFlags{output: "text"}
