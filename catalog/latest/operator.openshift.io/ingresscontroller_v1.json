@@ -586,6 +586,12 @@
             "null"
           ]
         },
+        "haproxyVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "httpCompression": {
           "additionalProperties": false,
           "default": {},
