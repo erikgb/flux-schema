@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-)
 
-var supportedOutputs = []string{"text", "yaml", "json"}
+	"github.com/spf13/pflag"
+)
 
 type Output string
 
@@ -17,23 +17,51 @@ func (o *Output) String() string {
 	return string(*o)
 }
 
-func (o *Output) Set(str string) error {
-	if strings.TrimSpace(str) == "" {
+func ValidateOutput(output string, allowed []string) error {
+	if strings.TrimSpace(output) == "" {
 		return fmt.Errorf("no output format given, must be one of: %s",
-			strings.Join(supportedOutputs, ", "))
+			strings.Join(allowed, ", "))
 	}
-	if !slices.Contains(supportedOutputs, str) {
+	if !slices.Contains(allowed, output) {
 		return fmt.Errorf("unsupported output format '%s', must be one of: %s",
-			str, strings.Join(supportedOutputs, ", "))
+			output, strings.Join(allowed, ", "))
 	}
-	*o = Output(str)
 	return nil
 }
 
-func (o *Output) Type() string {
-	return strings.Join(supportedOutputs, "|")
+type OutputValue interface {
+	pflag.Value
+	Description() string
 }
 
-func (o *Output) Description() string {
-	return fmt.Sprintf("output format, can be one of: %s", strings.Join(supportedOutputs, ", "))
+func NewOutputValue(output *Output, allowed ...string) OutputValue {
+	return &outputValue{
+		output:  output,
+		allowed: allowed,
+	}
+}
+
+type outputValue struct {
+	output  *Output
+	allowed []string
+}
+
+func (o *outputValue) String() string {
+	return o.output.String()
+}
+
+func (o *outputValue) Set(str string) error {
+	if err := ValidateOutput(str, o.allowed); err != nil {
+		return err
+	}
+	*o.output = Output(str)
+	return nil
+}
+
+func (o *outputValue) Type() string {
+	return strings.Join(o.allowed, "|")
+}
+
+func (o *outputValue) Description() string {
+	return fmt.Sprintf("output format, can be one of: %s", strings.Join(o.allowed, ", "))
 }

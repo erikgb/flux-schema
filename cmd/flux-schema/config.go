@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	apiv1 "github.com/fluxcd/flux-schema/api/v1beta1"
+	"github.com/fluxcd/flux-schema/internal/flag"
 )
 
 // envConfigFile names the environment variable used when --config is unset.
@@ -143,9 +144,10 @@ func applyValidateConfig(cmd *cobra.Command, cfg *apiv1.ValidateConfig, args *va
 		args.insecureSkipTLSVerify = cfg.InsecureSkipTLSVerify
 	}
 	if cfg.Output != "" && !flags.Changed("output") {
-		if err := args.output.Set(string(cfg.Output)); err != nil {
+		if err := flag.ValidateOutput(string(cfg.Output), validateOutputs); err != nil {
 			return fmt.Errorf("config output: %w", err)
 		}
+		args.output = flag.Output(cfg.Output)
 	}
 	if !flags.Changed("output-dir") {
 		args.outputDir = cfg.OutputDirectory

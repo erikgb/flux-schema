@@ -5,6 +5,7 @@ package main
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +13,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/fluxcd/flux-schema/internal/junitxml"
 	. "github.com/onsi/gomega"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	k8syaml "sigs.k8s.io/yaml"
@@ -1431,6 +1433,26 @@ func TestValidateCmd_Output_YAML_SmokeTest(t *testing.T) {
 	g.Expect(env.Kind).To(Equal(apiv1.ReportKind))
 	g.Expect(env.Schema).To(BeEmpty())
 	g.Expect(env.Report.Summary.Valid).To(Equal(1))
+}
+
+func TestValidateCmd_Output_JUnitXML_SmokeTest(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"-o", "junit",
+	})
+	g.Expect(err).To(Succeed())
+
+	var ts junitxml.TestSuites
+	g.Expect(xml.Unmarshal([]byte(out), &ts)).To(Succeed())
+	g.Expect(ts.Suites).To(HaveLen(1))
+	s := ts.Suites[0]
+	g.Expect(s.Tests).To(Equal(1))
 }
 
 // JSON/YAML output always emits every result regardless of --verbose; the

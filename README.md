@@ -189,6 +189,8 @@ Run `flux schema <command> --help` for the full flag list.
   GitOps repository with the `discover` command.
 - [Validation report reference](docs/report.md) — envelope shape and
   JSON Schema for `-o json` / `-o yaml` output.
+- [JUnit XML output guide](docs/junit.md) — CI test-report integration
+  for `-o junit` output.
 - [Inventory reference](docs/inventory.md) — envelope shape and JSON
   Schema for the `discover` command output.
 - [Configuration reference](docs/config.md) — config file envelope and

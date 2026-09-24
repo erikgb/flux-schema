@@ -28,6 +28,8 @@ var versionCmd = &cobra.Command{
 	RunE: versionCmdRun,
 }
 
+var versionOutputs = []string{"text", "yaml", "json"}
+
 type versionInfo struct {
 	Version   string `json:"version"`
 	GoVersion string `json:"goVersion"`
@@ -42,7 +44,9 @@ var versionArgs = versionFlags{
 }
 
 func init() {
-	versionCmd.Flags().VarP(&versionArgs.output, "output", "o", versionArgs.output.Description())
+	outputValue := flag.NewOutputValue(&versionArgs.output, versionOutputs...)
+
+	versionCmd.Flags().VarP(outputValue, "output", "o", outputValue.Description())
 	rootCmd.AddCommand(versionCmd)
 }
 

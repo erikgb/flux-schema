@@ -97,6 +97,9 @@ const (
 
 	// ConfigOutputYAML emits a YAML report.
 	ConfigOutputYAML ConfigOutput = "yaml"
+
+	// ConfigOutputJUnit emits a JUnit XML report.
+	ConfigOutputJUnit ConfigOutput = "junit"
 )
 
 // ExplainConfig defines defaults for explain options.

@@ -19,6 +19,7 @@ func TestOutput_Set(t *testing.T) {
 		{"text", "text", "text", false},
 		{"yaml", "yaml", "yaml", false},
 		{"json", "json", "json", false},
+		{"junit", "junit", "junit", false},
 		{"unsupported", "xml", "", true},
 		{"empty", "", "", true},
 	}
@@ -26,8 +27,9 @@ func TestOutput_Set(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			var o Output
-			err := o.Set(tt.str)
+			o := new(Output)
+			ov := NewOutputValue(o, "text", "yaml", "json", "junit")
+			err := ov.Set(tt.str)
 			if tt.expectErr {
 				g.Expect(err).To(HaveOccurred())
 			} else {

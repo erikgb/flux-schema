@@ -4,10 +4,13 @@ weight: 60
 
 # Flux Schema Report
 
-The `flux schema validate` command can emit a structured report of the
-validation results by setting `--output` to `json` or `yaml`. The envelope
-shape is versioned and documented by the JSON Schema in
+The `flux schema validate` command supports three structured output formats via
+`--output`: `json`, `yaml`, and `junit`.
+The `json` and `yaml` formats serialize the versioned validation report defined
+by the JSON Schema in
 [`report-v1beta1.json`](report-v1beta1.json).
+The `junit` format renders the validation results as JUnit XML for consumption by CI systems
+and other tools that support the JUnit format.
 
 ## Usage
 
